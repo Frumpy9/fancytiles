@@ -6,10 +6,10 @@ const SignalManager = imports.misc.signalManager;
 const St = imports.gi.St;
 
 const { DefaultColors } = require('./drawing');
+const { DragSession } = require('./drag-session');
 const { GridEditor } = require('./grid-editor');
 const { LayoutIO } = require('./io-utils');
 const { LayoutNode } = require('./node_tree');
-const { WindowSnapper } = require('./window-snapper');
 
 // a hardcoded layout for 2x2 layout as default
 const LayoutOf2x2 = new LayoutNode(0, [
@@ -86,8 +86,8 @@ class Application {
     // the active grid editor
     #gridEditor = null;
 
-    // the active window snappers for each monitor
-    #windowSnappers = [];
+    // the active drag session, if any (null between drags)
+    #dragSession = null;
 
     #layoutIO;
 
@@ -124,11 +124,10 @@ class Application {
             this.#gridEditor = null;
         }
 
-        // Destroy all window snappers
-        for (let snapper of this.#windowSnappers) {
-            snapper.destroy();
+        if (this.#dragSession) {
+            this.#dragSession.finish();
+            this.#dragSession = null;
         }
-        this.#windowSnappers = [];
     }
 
     #loadThemeColors() {
@@ -270,40 +269,50 @@ class Application {
     }
 
     #connectWindowGrabs() {
-        // start snapping when the user starts moving a window
-        this.#signals.connect(global.display, 'grab-op-begin', (display, screen, window, op) => {
-            if (op === Meta.GrabOp.MOVING && window.window_type === Meta.WindowType.NORMAL) {
-                // reload styling
-                this.#loadThemeColors();
-                const enableSnappingModifiers = mapModifierSettingToModifierType(this.#settings.settingsData.enableSnappingModifiers.value);
-                const enableMultiSnappingModifiers = mapModifierSettingToModifierType(this.#settings.settingsData.enableMultiSnappingModifiers.value);
-                const enableMergeAdjacentOnHover = this.#settings.settingsData.mergeAdjacentOnHover.value;
-                const mergingRadius = this.#settings.settingsData.mergingRadius.value;
-                const activateWithNonPrimaryButton = this.#settings.settingsData.activateWithNonPrimaryButton.value;
+        this.#signals.connect(global.display, 'grab-op-begin',
+            (display, screen, window, op) => this.#onGrabBegin(window, op));
+        this.#signals.connect(global.display, 'grab-op-end',
+            (display, screen, window, op) => this.#onGrabEnd(window, op));
+    }
 
-                // Create WindowSnapper for each monitor
-                const nMonitors = global.display.get_n_monitors();
-                for (let i = 0; i < nMonitors; i++) {
-                    const layout = this.#readOrCreateLayoutForDisplay(i, LayoutOf2x2);
-                    const snapper = new WindowSnapper(i, layout, window, enableSnappingModifiers, enableMultiSnappingModifiers, enableMergeAdjacentOnHover, mergingRadius, activateWithNonPrimaryButton);
-                    this.#windowSnappers.push(snapper);
-                }
-            }
-            return Clutter.EVENT_PROPAGATE;
-        });
+    #onGrabBegin(window, op) {
+        if (op !== Meta.GrabOp.MOVING || window.window_type !== Meta.WindowType.NORMAL) return;
 
-        // stop snapping when the user stops moving a window
-        this.#signals.connect(global.display, 'grab-op-end', (display, screen, window, op) => {
-            if (op === Meta.GrabOp.MOVING && window.window_type === Meta.WindowType.NORMAL) {
-                // Finalize and destroy all window snappers
-                for (let snapper of this.#windowSnappers) {
-                    snapper.finalize();
-                    snapper.destroy();
-                }
-                this.#windowSnappers = [];
-            }
-            return Clutter.EVENT_PROPAGATE;
+        // A grab-begin while a session is alive is our own restart landing.
+        if (this.#dragSession) {
+            this.#dragSession.onGrabRestart(window);
+            return;
+        }
+
+        // Fresh drag.
+        this.#loadThemeColors();
+        this.#dragSession = new DragSession({
+            window,
+            layoutFor: (i) => this.#readOrCreateLayoutForDisplay(i, LayoutOf2x2),
+            options: this.#snapshotDragOptions(),
         });
+    }
+
+    #onGrabEnd(window, op) {
+        if (!this.#dragSession) return;
+        if (op !== Meta.GrabOp.MOVING || window.window_type !== Meta.WindowType.NORMAL) return;
+
+        if (this.#dragSession.tryRestart()) return;  // session continues
+
+        this.#dragSession.finish();
+        this.#dragSession = null;
+    }
+
+    #snapshotDragOptions() {
+        const s = this.#settings.settingsData;
+        return {
+            enableSnappingModifiers: mapModifierSettingToModifierType(s.enableSnappingModifiers.value),
+            enableMultiSnappingModifiers: mapModifierSettingToModifierType(s.enableMultiSnappingModifiers.value),
+            mergeAdjacentOnHover: s.mergeAdjacentOnHover.value,
+            mergingRadius: s.mergingRadius.value,
+            activateWithNonPrimaryButton: s.activateWithNonPrimaryButton.value,
+            autoStartSnapping: s.autoStartSnapping.value,
+        };
     }
 }
 

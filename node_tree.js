@@ -817,29 +817,63 @@ class SnappingOperation extends LayoutOperation {
     #enableAdjacentMerging;
     #mergingRadius;
     #activateWithNonPrimaryButton;
+    #snappingEnabled = false;
+    #prevModifierPressed = false;
+    #prevSecondaryPressed = false;
     #previousHighlightedNodes = null;
     #previousInsetNodeRect = null;
 
-    constructor(tree, enableSnappingModifiers, enableMultiSnappingModifiers, enableAdjacentMerging, mergingRadius, activateWithNonPrimaryButton) {
+    constructor(tree, enableSnappingModifiers, enableMultiSnappingModifiers, enableAdjacentMerging, mergingRadius, activateWithNonPrimaryButton, autoStartSnapping) {
         super(tree);
         this.#enableSnappingModifiers = enableSnappingModifiers;
         this.#enableMultiSnappingModifiers = enableMultiSnappingModifiers;
         this.#enableAdjacentMerging = enableAdjacentMerging;
         this.#mergingRadius = mergingRadius;
         this.#activateWithNonPrimaryButton = activateWithNonPrimaryButton;
+        this.#snappingEnabled = autoStartSnapping;
+    }
+
+    get isSnappingEnabled() { return this.#snappingEnabled; }
+
+    // Enable or disable snapping. Called externally to activate (after an
+    // RMB-tap restart) or to cancel (on Escape).
+    setSnappingEnabled(value) {
+        if (this.#snappingEnabled === value) return;
+        this.#snappingEnabled = value;
+        if (!this.#snappingEnabled) {
+            // Disabling snapping — clear destinations and hide overlay.
+            this.cancel();
+        }
     }
 
     onMotion(x, y, state) {
-        let snappingEnabled;
-
         const Clutter = imports.gi.Clutter;
         const secondaryButtonPressed = (state & Clutter.ModifierType.BUTTON3_MASK);
         const modifierPressed = this.#enableSnappingModifiers.some((e) => (state & e));
-        const noModifierRequired = this.#enableSnappingModifiers.length == 0 && !this.#activateWithNonPrimaryButton;
 
-        snappingEnabled = (this.#activateWithNonPrimaryButton && secondaryButtonPressed) || modifierPressed || noModifierRequired;
+        // Detect rising edges (not-pressed → pressed) for toggle behaviour.
+        const modifierRisingEdge = modifierPressed && !this.#prevModifierPressed;
+        const secondaryRisingEdge = this.#activateWithNonPrimaryButton && secondaryButtonPressed && !this.#prevSecondaryPressed;
+        this.#prevModifierPressed = modifierPressed;
+        this.#prevSecondaryPressed = secondaryButtonPressed;
 
-        if (!snappingEnabled) {
+        if (modifierRisingEdge || secondaryRisingEdge) {
+            this.#snappingEnabled = !this.#snappingEnabled;
+        }
+
+        if (!this.#snappingEnabled) {
+            return this.cancel();
+        }
+
+        // Multi-monitor: each monitor has its own SnappingOperation, all of
+        // which receive the same global pointer coordinates. A snapper whose
+        // monitor does NOT contain the cursor must not hold stale highlights
+        // — otherwise, on LMB release the stale destination would cause a
+        // spurious snap on that other monitor. Note: this calls cancel() but
+        // cancel() does not disable snapping, so once the cursor
+        // comes back on-monitor snapping will resume as expected.
+        const r = this.tree.rect;
+        if (!r || x < r.x || x >= r.x + r.width || y < r.y || y >= r.y + r.height) {
             return this.cancel();
         }
 
@@ -968,6 +1002,11 @@ class SnappingOperation extends LayoutOperation {
         this.tree.insetNode = null;
         this.#previousHighlightedNodes = null;
         this.#previousInsetNodeRect = null;
+        // NOTE: cancel() deliberately does NOT disable snapping.
+        // The enabled state is owned exclusively by setSnappingEnabled()
+        // (external) and the toggle logic in onMotion(). That lets the
+        // multi-monitor off-monitor cleanup call cancel() without
+        // disabling snapping for the drag as a whole.
 
         if (this.showRegions) {
             this.showRegions = false;

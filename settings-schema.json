@@ -6,8 +6,8 @@
   },
   "enableSnappingModifiers": {
     "type": "combobox",
-    "description": "Key modifier to activate snapping",
-    "tooltip": "When set, holding the key modifier while dragging activates snapping mode. Snapping mode is always activated when both the key modifier is set to (none) and activating with the secondary mouse button is disabled.",
+    "description": "Key modifier to toggle snapping",
+    "tooltip": "When set, pressing the key modifier while dragging (de)activates the snapping",
     "default": "CTRL",
     "options": {
       "(none)": "",
@@ -19,10 +19,16 @@
   },
   "activateWithNonPrimaryButton": {
     "type": "switch",
-    "description": "Activate snapping with secondary mouse button",
-    "tooltip": "When enabled, holding the secondary mouse button while dragging activates snapping mode. Snapping mode is always activated when both the key modifier is set to (none) and activating with the secondary mouse button is disabled.",
+    "description": "Toggle snapping with secondary mouse button",
+    "tooltip": "When enabled, pressing the secondary mouse button while dragging (de)activates the snapping",
     "default": false
-  },  
+  },
+  "autoStartSnapping": {
+    "type": "switch",
+    "description": "Automatically start snapping when dragging",
+    "tooltip": "When enabled, snapping activates immediately when a window drag begins. You can still toggle it off with the modifier key or secondary mouse button.",
+    "default": false
+  },
   "enableMultiSnappingModifiers": {
     "type": "combobox",
     "description": "Key modifier to enable merging additional regions",

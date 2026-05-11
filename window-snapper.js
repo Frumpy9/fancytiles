@@ -44,7 +44,7 @@ class WindowSnapper {
 
     #signals = new SignalManager.SignalManager(null);
 
-    constructor(displayIdx, layout, window, enableSnappingModifiers, enableMultiSnappingModifiers, enableAdjacentMerging, mergingRadius, activateWithNonPrimaryButton) {
+    constructor(displayIdx, layout, window, enableSnappingModifiers, enableMultiSnappingModifiers, enableAdjacentMerging, mergingRadius, activateWithNonPrimaryButton, autoStartSnapping) {
         // the layout to use for the snapping operation
         this.#layout = layout;
 
@@ -88,9 +88,30 @@ class WindowSnapper {
 
         // ensure the layout is correct for the snap area
         this.#layout.calculateRects(workArea.x, workArea.y, workArea.width, workArea.height);
-        this.#snappingOperation = new SnappingOperation(this.#layout, this.#enableSnappingModifiers, this.#enableMultiSnappingModifiers, this.#enableAdjacentMerging, this.#mergingRadius, this.#activateWithNonPrimaryButton);
+        this.#snappingOperation = new SnappingOperation(this.#layout, this.#enableSnappingModifiers, this.#enableMultiSnappingModifiers, this.#enableAdjacentMerging, this.#mergingRadius, this.#activateWithNonPrimaryButton, autoStartSnapping);
 
         this.#signals.connect(this.#window, 'position-changed', this.#onWindowMoved.bind(this));
+    }
+
+    // Whether snapping is currently enabled for this drag.
+    get isSnappingEnabled() {
+        return this.#snappingOperation ? this.#snappingOperation.isSnappingEnabled : false;
+    }
+
+    // Run an onMotion pass for the current pointer position, show or
+    // hide the overlay as needed, and repaint. Used both for window
+    // motion events and for DragSession's activation poller.
+    refreshFromPointer() {
+        if (!this.#snappingOperation) return;
+        const [x, y, state] = global.get_pointer();
+        const result = this.#snappingOperation.onMotion(x, y, state);
+        if (!(result && result.shouldRedraw)) return;
+        if (this.#snappingOperation.showRegions) {
+            this.#container.show();
+        } else {
+            this.#container.hide();
+        }
+        this.#drawingArea.queue_repaint();
     }
 
     // snap if the user wants to
@@ -140,20 +161,9 @@ class WindowSnapper {
         cr.$dispose();
     }
 
-    #onWindowMoved(actor, event) {
-        if (!this.#snappingOperation) {
-            return;
-        }
-
-        let [x, y, state] = global.get_pointer();
-
-        let result = this.#snappingOperation.onMotion(x, y, state);
-        if (result && result.shouldRedraw) {
-            if (this.#snappingOperation.showRegions) {
-                this.#container.show();
-            }
-            this.#drawingArea.queue_repaint();
-        }
+    // position-changed signal handler on the dragged window.
+    #onWindowMoved() {
+        this.refreshFromPointer();
     }
 }
 
