@@ -1,5 +1,9 @@
 # Fancy Tiles
 
+> # ⚠️ SLOP-CODED FORK DISCLAIMER
+>
+> This fork was slop coded. It is provided as-is and may contain bugs, rough edges, or poorly tested changes. Review the code and use it at your own risk. This disclaimer applies to the fork's modifications, not to the original Fancy Tiles project or its maintainers.
+
 Fancy Tiles is a [Cinnamon](https://github.com/linuxmint/Cinnamon) Extension that snaps your windows to regions in a very flexible layout. This layout does not have to be a typical grid where horizontal and vertical lines span the screen and columns and rows do not have to be evenly distributed. This is inspired by the way [Fancy Zones](https://learn.microsoft.com/en-us/windows/powertoys/fancyzones) work in Windows.
 
 
@@ -35,3 +39,5 @@ If you want to make the snapping region even larger you can hold the `<ALT>` key
 There are 8 slots to hold layout presets. Presets 4-8 are read only _system presets_ and 1-4 are your _user presets_. When the layout editor is opened, press `<SPACE>` to view the presets, and click the preset you want to load. Similarly, press the `<ALT>` key to open the save preset dialog and select one of the four user slots that you want to save the current layout to.
 
 Tip: you can quickly load presets by opening the layout editor and immediately press the slot number of your desired preset (1-8).
+
+Each monitor keeps its active layout separately. Layouts are saved by monitor name, with the numeric monitor index used as a fallback.
