@@ -65,6 +65,19 @@ function getFocusedDisplay() {
     return focusWindow.get_monitor();
 }
 
+function getMonitorKey(displayIdx) {
+    try {
+        const monitorName = global.display.get_monitor_name(displayIdx);
+        if (monitorName) {
+            return monitorName;
+        }
+    } catch (e) {
+        global.logWarning(`fancytiles: unable to get name for monitor ${displayIdx}: ${e}`);
+    }
+
+    return displayIdx;
+}
+
 function mapModifierSettingToModifierType(modifierSetting) {
     switch(modifierSetting) {
         case 'CTRL':
@@ -91,8 +104,8 @@ class Application {
 
     #layoutIO;
 
-    // the layout trees for each display
-    #layouts = {};
+    // the layout trees for each physical monitor
+    #layouts = new Map();
 
     // the layout trees for each preset
     #presets = null;
@@ -186,8 +199,8 @@ class Application {
     }
 
     #saveLayouts() {
-        for (let key in this.#layouts) {
-            this.#layoutIO.saveLayoutForDisplay(key, this.#layouts[key]);
+        for (const [monitorKey, layout] of this.#layouts) {
+            this.#layoutIO.saveLayoutForDisplay(monitorKey, layout);
         }
         // save user presets
         for (let i = 0; i < 4; i++) {
@@ -255,16 +268,17 @@ class Application {
     }
 
     // read the layout from the configuration file, or set the default
-    #readOrCreateLayoutForDisplay(displayIdx, defaultLayout = LayoutOf2x2.clone()) {
-        if (this.#layouts[displayIdx]) {
-            return this.#layouts[displayIdx];
+    #readOrCreateLayoutForDisplay(displayIdx, defaultLayout = LayoutOf2x2) {
+        const monitorKey = getMonitorKey(displayIdx);
+        if (this.#layouts.has(monitorKey)) {
+            return this.#layouts.get(monitorKey);
         }
 
-        let tree = this.#layoutIO.loadLayoutForDisplay(displayIdx);
+        let tree = this.#layoutIO.loadLayoutForDisplay(monitorKey);
         if (!tree) {
-            tree = defaultLayout;
+            tree = defaultLayout.clone();
         }
-        this.#layouts[displayIdx] = tree;
+        this.#layouts.set(monitorKey, tree);
         return tree;
     }
 

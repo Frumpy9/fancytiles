@@ -16,12 +16,12 @@ class LayoutIO {
         return `preset-${presetIdx}`;
     }
 
-    displayFileKey(displayIdx) {
-        return `display-${displayIdx}`;
+    displayFileKey(monitorKey) {
+        return `monitor-${monitorKey}`;
     }
 
-    #filePathForDisplay(displayIdx) {
-        return this.#filePathForKey(this.displayFileKey(displayIdx));
+    #filePathForDisplay(monitorKey) {
+        return this.#filePathForKey(this.displayFileKey(monitorKey));
     }
 
     #filePathForPreset(presetIdx) {
@@ -43,14 +43,14 @@ class LayoutIO {
 
 
     // Save layout tree to file
-    saveLayoutForDisplay(displayIdx, layout) {
+    saveLayoutForDisplay(monitorKey, layout) {
         const integrityError = layout.getIntegrityError();
         if (integrityError) {
             global.logError('Invalid layout tree structure. Cannot save layout. ', integrityError);
             return false;
         }
 
-        const filePath = this.#filePathForDisplay(displayIdx);
+        const filePath = this.#filePathForDisplay(monitorKey);
         return this.#saveToFile(layout, filePath);
     }
 
@@ -91,8 +91,8 @@ class LayoutIO {
         }
     }
 
-    loadLayoutForDisplay(displayIdx) {
-        return this.#loadLayoutFromFile(this.#filePathForDisplay(displayIdx));
+    loadLayoutForDisplay(monitorKey) {
+        return this.#loadLayoutFromFile(this.#filePathForDisplay(monitorKey));
     }
 
     loadLayoutForPreset(presetIdx) {
@@ -136,4 +136,4 @@ class LayoutIO {
 // Export the module
 module.exports = {
     LayoutIO
-}; 
+};

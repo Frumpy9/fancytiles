@@ -35,3 +35,5 @@ If you want to make the snapping region even larger you can hold the `<ALT>` key
 There are 8 slots to hold layout presets. Presets 4-8 are read only _system presets_ and 1-4 are your _user presets_. When the layout editor is opened, press `<SPACE>` to view the presets, and click the preset you want to load. Similarly, press the `<ALT>` key to open the save preset dialog and select one of the four user slots that you want to save the current layout to.
 
 Tip: you can quickly load presets by opening the layout editor and immediately press the slot number of your desired preset (1-8).
+
+Each monitor keeps its active layout separately. Layouts are saved by monitor name, with the numeric monitor index used as a fallback.
