@@ -1,5 +1,9 @@
 # Fancy Tiles
 
+> # ⚠️ SLOP-CODED FORK DISCLAIMER
+>
+> This fork was slop coded. It is provided as-is and may contain bugs, rough edges, or poorly tested changes. Review the code and use it at your own risk. This disclaimer applies to the fork's modifications, not to the original Fancy Tiles project or its maintainers.
+
 Fancy Tiles is a [Cinnamon](https://github.com/linuxmint/Cinnamon) Extension that snaps your windows to regions in a very flexible layout. This layout does not have to be a typical grid where horizontal and vertical lines span the screen and columns and rows do not have to be evenly distributed. This is inspired by the way [Fancy Zones](https://learn.microsoft.com/en-us/windows/powertoys/fancyzones) work in Windows.
 
 
